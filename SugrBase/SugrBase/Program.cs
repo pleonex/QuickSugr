@@ -29,15 +29,34 @@ namespace SugrBase
 		{
 			string dbPath = "/home/benito/workdir/MySugrDatabaseV1.sqlite";
 
-			string connectionStr = string.Format("Data Source={0};Version=3;", dbPath);
-			SqliteConnection database = new SqliteConnection(connectionStr);
+			var connectionStr = new SqliteConnectionStringBuilder();
+			connectionStr.DataSource = dbPath;
+
+			var database = new SqliteConnection(connectionStr.ConnectionString);
 			database.Open();
 
 			string retrieveTable = "select * from zmslog order by Z_PK";
-			SqliteCommand tableCmd = new SqliteCommand(retrieveTable, database);
-			SqliteDataReader tableReader = tableCmd.ExecuteReader();
+			var tableCmd = new SqliteCommand(retrieveTable, database);
+			var tableReader = tableCmd.ExecuteReader();
 
 			string outFormat = "{0}-> Sugar: {1}, Basal: {2}";
+			tableReader.Read();
+			Console.WriteLine(string.Format(outFormat, tableReader["Z_PK"],
+				tableReader["ZBLOODGLUCOSEMEASUREMENT"], tableReader["ZPENBASALINJECTIONUNITS"]));
+
+			var insertBuilder = new SqliteCommandBuilder();
+			insertBuilder.DataAdapter = new SqliteDataAdapter("select * from zmslog", database);
+			var cmd = insertBuilder.GetInsertCommand(true);
+			cmd.Parameters.AddWithValue("Z_PK", 1170);
+			cmd.Parameters.AddWithValue("ZBLOODGLUCOSEMEASUREMENT", 99);
+			cmd.Parameters.AddWithValue("ZPENBASALINJECTIONUNITS", 12);
+			Console.WriteLine(cmd.ExecuteNonQuery());
+
+		 	retrieveTable = "select * from zmslog order by Z_PK desc";
+			tableCmd = new SqliteCommand(retrieveTable, database);
+			tableReader = tableCmd.ExecuteReader();
+
+			outFormat = "{0}-> Sugar: {1}, Basal: {2}";
 			tableReader.Read();
 			Console.WriteLine(string.Format(outFormat, tableReader["Z_PK"],
 				tableReader["ZBLOODGLUCOSEMEASUREMENT"], tableReader["ZPENBASALINJECTIONUNITS"]));
