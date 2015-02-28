@@ -19,6 +19,7 @@
 //  You should have received a copy of the GNU General Public License
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 using System;
+using Mono.Data.Sqlite;
 
 namespace SugrBase
 {
@@ -26,7 +27,22 @@ namespace SugrBase
 	{
 		public static void Main(string[] args)
 		{
-			Console.WriteLine("Hello World!");
+			string dbPath = "/home/benito/workdir/MySugrDatabaseV1.sqlite";
+
+			string connectionStr = string.Format("Data Source={0};Version=3;", dbPath);
+			SqliteConnection database = new SqliteConnection(connectionStr);
+			database.Open();
+
+			string retrieveTable = "select * from zmslog order by Z_PK";
+			SqliteCommand tableCmd = new SqliteCommand(retrieveTable, database);
+			SqliteDataReader tableReader = tableCmd.ExecuteReader();
+
+			string outFormat = "{0}-> Sugar: {1}, Basal: {2}";
+			tableReader.Read();
+			Console.WriteLine(string.Format(outFormat, tableReader["Z_PK"],
+				tableReader["ZBLOODGLUCOSEMEASUREMENT"], tableReader["ZPENBASALINJECTIONUNITS"]));
+
+			database.Close();
 		}
 	}
 }
