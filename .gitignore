@@ -1,3 +1,6 @@
 *.userprefs
 **/bin
 **/obj
+node_modules
+*.pdf
+SugrWeb/run.sh
