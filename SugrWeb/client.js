@@ -16,7 +16,8 @@
 */
 
 var rest = require('restler')
-var fs = require('fs');
+var fs = require('fs')
+var read = require('read')
 
 // Function to get login cookie token.
 function login(user, pwd, complete) {
@@ -29,14 +30,17 @@ function login(user, pwd, complete) {
 
     rest.post(loginUrl, { data: postData, followRedirects: false })
         .on('complete', function(data, response) {
-            var regex = /(SPRING_SECURITY_REMEMBER_ME_COOKIE=[A-Za-z0-9]*);/
-            var cookie = regex.exec(response.headers['set-cookie'])[1]
-            complete(cookie)
+            var regex = /SPRING_SECURITY_REMEMBER_ME_COOKIE=([A-Za-z0-9]*);/
+            var token = regex.exec(response.headers['set-cookie'])[1]
+            complete(token)
     })
 }
 
-MySugr = rest.service(function(cookie) {
-    this.defaults.headers = { Cookie: cookie, 'User-Agent': 'QuickSugr' }
+MySugr = rest.service(function(token) {
+    this.defaults.headers = {
+        Cookie: 'SPRING_SECURITY_REMEMBER_ME_COOKIE=' + token,
+        'User-Agent': 'QuickSugr'
+    }
 }, {
     baseURL: 'https://hello.mysugr.com'
 }, {
@@ -65,11 +69,27 @@ MySugr = rest.service(function(cookie) {
     }
 })
 
+var args = process.argv.slice(2)
+var token = process.env.SUGR_TOKEN
 
-login(process.env.SUGR_USER, process.env.SUGR_PWD, function(cookie) {
-    var client = new MySugr(cookie)
+// If there is no token set or the argument --login is passed, login
+if (token == null || (args.length == 1 && args[0] == "--login")) {
+    // Ask user and password
+    read({ prompt: 'E-mail: '}, function(er, email) {
+        read({ prompt: 'Password: ', silent: true }, function(er, password) {
+            console.log('login...')
+            login(email, password, function(token) { console.log(token) })
+        })
+    })
 
-    var fromDate = new Date(2015, 8, 28, 0, 0, 0, 0)    // 2015/09/28
-    var toDate = new Date(2015, 9, 4, 0, 0, 0, 0)       // 2015/10/04
-    client.downloadReport(fromDate, toDate)
-})
+    return
+}
+
+// Create the rest client
+var client = new MySugr(token)
+
+// Download the pdf as report
+console.log('requesting report...')
+var fromDate = new Date(2015, 8, 28, 0, 0, 0, 0)    // 2015/09/28
+var toDate = new Date(2015, 9, 4, 0, 0, 0, 0)       // 2015/10/04
+client.downloadReport(fromDate, toDate)
