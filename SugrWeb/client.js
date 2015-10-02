@@ -16,8 +16,6 @@
 */
 
 var rest = require('restler')
-var fs = require('fs')
-var read = require('read')
 
 // Function to get login cookie token.
 function login(user, pwd, complete) {
@@ -63,9 +61,18 @@ MySugr = rest.service(function(token) {
                 var regex = new RegExp(/filename=(.*).pdf/)
                 var matchs = response.headers['content-disposition'].match(regex)
                 var outFile = matchs[1] + '.pdf'
+
                 console.log('saving to ' + outFile)
+                var fs = require('fs')
                 fs.writeFileSync(outFile, response.raw)
             });
+    }
+
+    // Function to add an entry
+    addEntry: function(entry) {
+        var uuid = require('uuid')()
+        return this.put('/app/rest/v2/logentries/' + uuid,
+                        { data: {'logentry': entry} })
     }
 })
 
@@ -75,6 +82,7 @@ var token = process.env.SUGR_TOKEN
 // If there is no token set or the argument --login is passed, login
 if (token == null || (args.length == 1 && args[0] == "--login")) {
     // Ask user and password
+    var read = require('read')
     read({ prompt: 'E-mail: '}, function(er, email) {
         read({ prompt: 'Password: ', silent: true }, function(er, password) {
             console.log('login...')
@@ -93,3 +101,47 @@ console.log('requesting report...')
 var fromDate = new Date(2015, 8, 28, 0, 0, 0, 0)    // 2015/09/28
 var toDate = new Date(2015, 9, 4, 0, 0, 0, 0)       // 2015/10/04
 client.downloadReport(fromDate, toDate)
+
+// Example entry
+var logentry = {
+    "id": "82d26581-ab96-448b-bac2-260f13b4cd3a",
+    "createdAt": null,
+    "dateOfEntryUtcOffsetSeconds": 7200,
+    "dateOfEntryLocal": 1443815880,
+    "dateOfEntry": 1443808680,
+    "tags": [
+        { "name":"correction" }
+    ],
+    "locationLatitude": null,
+    "locationLongitude": null,
+    "locationText": "Calle YerbagÃ¼ena, 28, Granada, Spain",
+    "locationType": null,
+    "bloodGlucoseMeasurement": 319,
+    "pumpTemporaryBasalPercentage": null,
+    "pumpTemporaryBasalDuration": null,
+    "pumpBolusNormalUnits": null,
+    "penBolusInjectionUnits": null,
+    "penBasalInjectionUnits": null,
+    "bolusFoodInsulinUnits": null,
+    "bolusCorrectionInsulinUnits": 4,
+    "mealCarbohydrates": null,
+    "mealDescriptionText": null,
+    "exerciseDescriptionText": null,
+    "exerciseDuration": null,
+    "exerciseIntensity": null,
+    "stepsCount": null,
+    "bloodPressureSystolic": null,
+    "bloodPressureDiastolic": null,
+    "bodyWeight": null,
+    "hbA1c": null,
+    "ketones": null,
+    "isFavorite": null,
+    "isTemplate": null,
+    "points": 5,
+    "weatherTemperature": null,
+    "weatherCondition": null,
+    "verifications": [],
+    "nutritionalConstituents": null,
+    "medications": null,
+    "note": null
+}
