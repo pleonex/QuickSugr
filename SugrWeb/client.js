@@ -18,8 +18,6 @@
 var rest = require('restler')
 var fs = require('fs');
 
-var SUGR_API_URL = 'https://hello.mysugr.com/app/rest/v2'
-
 // Function to get login cookie token.
 function login(user, pwd, complete) {
     var loginUrl = 'https://hello.mysugr.com/app/login/j_spring_security_check'
@@ -29,7 +27,6 @@ function login(user, pwd, complete) {
         '_spring_security_remember_me': 'on'
     }
 
-    console.log('login...')
     rest.post(loginUrl, { data: postData, followRedirects: false })
         .on('complete', function(data, response) {
             var regex = /(SPRING_SECURITY_REMEMBER_ME_COOKIE=[A-Za-z0-9]*);/
@@ -38,34 +35,41 @@ function login(user, pwd, complete) {
     })
 }
 
-// Function to download the report as PDF.
-function downloadReport(cookie, from, to) {
-    var toEpoch   = parseInt(to.getTime() / 1000)
-    var fromEpoch = parseInt(from.getTime() / 1000)
-    var params = 'dateOfEntryFrom=' + fromEpoch + '&dateOfEntryTo=' + toEpoch
+MySugr = rest.service(function(cookie) {
+    this.defaults.headers = { Cookie: cookie, 'User-Agent': 'QuickSugr' }
+}, {
+    baseURL: 'https://hello.mysugr.com'
+}, {
+    // Function to download the report as PDF.
+    downloadReport: function(fromDate, toDate) {
+        var toEpoch   = parseInt(toDate.getTime() / 1000)
+        var fromEpoch = parseInt(fromDate.getTime() / 1000)
 
-    console.log('requesting pdf...')
-    rest.get(SUGR_API_URL + '/export/download/pdf?' + params,
-             {headers: {Cookie: cookie} })
-        .on('complete', function (data, response) {
-            if (response.statusCode != 200) {
-                console.log("error: " + response.statusCode)
-                return
-            }
+        this.get('/app/rest/v2/export/download/pdf', {
+                query: {
+                    dateOfEntryFrom: fromEpoch,
+                    dateOfEntryTo: toEpoch
+                } })
+            .on('complete', function (data, response) {
+                if (response.statusCode != 200) {
+                    console.log("error: " + response.statusCode)
+                    return
+                }
 
-            var regex = new RegExp(/filename=(.*).pdf/)
-            var matchs = response.headers['content-disposition'].match(regex)
-            var outFile = matchs[1] + '.pdf'
-            console.log('saving to ' + outFile)
-            fs.writeFileSync(outFile, response.raw)
-        });
-}
+                var regex = new RegExp(/filename=(.*).pdf/)
+                var matchs = response.headers['content-disposition'].match(regex)
+                var outFile = matchs[1] + '.pdf'
+                console.log('saving to ' + outFile)
+                fs.writeFileSync(outFile, response.raw)
+            });
+    }
+})
 
 
 login(process.env.SUGR_USER, process.env.SUGR_PWD, function(cookie) {
-    console.log('Your session cookie is: ' + cookie)
+    var client = new MySugr(cookie)
 
     var fromDate = new Date(2015, 8, 28, 0, 0, 0, 0)    // 2015/09/28
     var toDate = new Date(2015, 9, 4, 0, 0, 0, 0)       // 2015/10/04
-    downloadReport(cookie, fromDate, toDate)
+    client.downloadReport(fromDate, toDate)
 })
