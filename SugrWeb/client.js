@@ -66,7 +66,7 @@ MySugr = rest.service(function(token) {
                 var fs = require('fs')
                 fs.writeFileSync(outFile, response.raw)
             });
-    }
+    },
 
     // Function to add an entry
     addEntry: function(entry) {
